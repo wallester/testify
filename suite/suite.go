@@ -5,9 +5,12 @@ import (
 	"fmt"
 	"math/rand"
 	"os"
+	"path"
 	"reflect"
 	"regexp"
+	"runtime"
 	"runtime/debug"
+	"strings"
 	"sync"
 	"testing"
 	"time"
@@ -122,6 +125,15 @@ func (suite *Suite) Run(name string, subtest func()) bool {
 func Run(t *testing.T, suite TestingSuite) {
 	defer recoverAndFailOnPanic(t)
 
+	// skip=1 to get the caller of logCallerInfo
+	_, file, _, ok := runtime.Caller(1)
+	if !ok {
+		fmt.Println("Could not get caller information")
+		return
+	}
+
+	serviceName := cleanPath(file)
+
 	suite.SetT(t)
 	suite.SetS(suite)
 
@@ -218,9 +230,19 @@ func Run(t *testing.T, suite TestingSuite) {
 		}()
 	}
 
-	rand.Shuffle(len(tests), func(i, j int) {
-		tests[i], tests[j] = tests[j], tests[i]
-	})
+	fmt.Println("XXXXXXXXXXXXXXX")
+	if _, o := servicesToShuffle[serviceName]; o {
+		fmt.Println("************************************************")
+		fmt.Println("shuffled")
+		fmt.Println("************************************************")
+
+		rand.Shuffle(len(tests), func(i, j int) {
+			tests[i], tests[j] = tests[j], tests[i]
+		})
+	}
+
+	fmt.Println("XXXXXXXXXXXXXXX")
+	runTests(t, tests)
 
 	runTests(t, tests)
 }
@@ -256,3 +278,20 @@ func runTests(t testing.TB, tests []testing.InternalTest) {
 type runner interface {
 	Run(name string, f func(t *testing.T)) bool
 }
+
+var servicesToShuffle map[string]struct{} = map[string]struct{}{
+	"card-reference-numbers-management-service": {},
+}
+
+func cleanPath(str string) string {
+	replaced := strings.Replace(str, monorepoPath+"/", "", -1)
+
+	r := strings.Split(replaced, "/")
+	if r[0] == "pkg" {
+		return strings.Split(str, "/")[1]
+	}
+
+	return r[0]
+}
+
+var monorepoPath = path.Join(os.Getenv("GOPATH"), "src", "github.com", "wallester", "monorepo")

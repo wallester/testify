@@ -236,8 +236,6 @@ func Run(t *testing.T, suite TestingSuite) {
 	}
 
 	runTests(t, tests)
-
-	runTests(t, tests)
 }
 
 // Filtering method according to set regular expression

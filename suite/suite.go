@@ -125,7 +125,6 @@ func (suite *Suite) Run(name string, subtest func()) bool {
 func Run(t *testing.T, suite TestingSuite) {
 	defer recoverAndFailOnPanic(t)
 
-	// skip=1 to get the caller of logCallerInfo
 	_, file, _, ok := runtime.Caller(1)
 	if !ok {
 		fmt.Println("Could not get caller information")

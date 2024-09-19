@@ -128,7 +128,7 @@ func Run(t *testing.T, suite TestingSuite) {
 	_, file, _, ok := runtime.Caller(1)
 	if !ok {
 		fmt.Println("Could not get caller information")
-		return
+		os.Exit(1)
 	}
 
 	serviceName := cleanPath(file)
@@ -229,18 +229,12 @@ func Run(t *testing.T, suite TestingSuite) {
 		}()
 	}
 
-	fmt.Println("XXXXXXXXXXXXXXX")
-	if _, o := servicesToShuffle[serviceName]; o {
-		fmt.Println("************************************************")
-		fmt.Println("shuffled")
-		fmt.Println("************************************************")
-
+	if _, ok := servicesToShuffle[serviceName]; ok {
 		rand.Shuffle(len(tests), func(i, j int) {
 			tests[i], tests[j] = tests[j], tests[i]
 		})
 	}
 
-	fmt.Println("XXXXXXXXXXXXXXX")
 	runTests(t, tests)
 
 	runTests(t, tests)
@@ -278,10 +272,6 @@ type runner interface {
 	Run(name string, f func(t *testing.T)) bool
 }
 
-var servicesToShuffle map[string]struct{} = map[string]struct{}{
-	"card-reference-numbers-management-service": {},
-}
-
 func cleanPath(str string) string {
 	replaced := strings.Replace(str, monorepoPath+"/", "", -1)
 
@@ -294,3 +284,8 @@ func cleanPath(str string) string {
 }
 
 var monorepoPath = path.Join(os.Getenv("GOPATH"), "src", "github.com", "wallester", "monorepo")
+
+var servicesToShuffle = map[string]struct{}{
+	"card-reference-numbers-management-service": {},
+	"automation": {},
+}

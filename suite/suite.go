@@ -5,9 +5,12 @@ import (
 	"fmt"
 	"math/rand"
 	"os"
+	"path"
 	"reflect"
 	"regexp"
+	"runtime"
 	"runtime/debug"
+	"strings"
 	"sync"
 	"testing"
 	"time"
@@ -122,6 +125,15 @@ func (suite *Suite) Run(name string, subtest func()) bool {
 func Run(t *testing.T, suite TestingSuite) {
 	defer recoverAndFailOnPanic(t)
 
+	// getting path to file where the call was made
+	_, file, _, ok := runtime.Caller(1)
+	if !ok {
+		fmt.Println("Could not get caller information")
+		os.Exit(1)
+	}
+
+	serviceName := cleanPath(file)
+
 	suite.SetT(t)
 	suite.SetS(suite)
 
@@ -218,9 +230,12 @@ func Run(t *testing.T, suite TestingSuite) {
 		}()
 	}
 
-	rand.Shuffle(len(tests), func(i, j int) {
-		tests[i], tests[j] = tests[j], tests[i]
-	})
+	// Tests will be shuffled if service name is in servicesToShuffle map
+	if _, ok := servicesToShuffle[serviceName]; ok {
+		rand.Shuffle(len(tests), func(i, j int) {
+			tests[i], tests[j] = tests[j], tests[i]
+		})
+	}
 
 	runTests(t, tests)
 }
@@ -255,4 +270,26 @@ func runTests(t testing.TB, tests []testing.InternalTest) {
 
 type runner interface {
 	Run(name string, f func(t *testing.T)) bool
+}
+
+func cleanPath(path string) string {
+	replaced := strings.Replace(path, monorepoPath+"/", "", -1)
+
+	splittedPath := strings.Split(replaced, "/")
+
+	// checking if service is from monorepo/pkg folder
+	if splittedPath[0] == "pkg" {
+		return splittedPath[1]
+	}
+
+	return splittedPath[0]
+}
+
+var monorepoPath = path.Join(os.Getenv("GOPATH"), "src", "github.com", "wallester", "monorepo")
+
+// services map which are prepared for shuffled tests run
+// to be removed after fixing all services tests
+var servicesToShuffle = map[string]struct{}{
+	"automation": {},
+	"card-reference-numbers-management-service": {},
 }

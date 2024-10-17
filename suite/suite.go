@@ -5,12 +5,10 @@ import (
 	"fmt"
 	"math/rand"
 	"os"
-	"path"
 	"reflect"
 	"regexp"
 	"runtime"
 	"runtime/debug"
-	"strings"
 	"sync"
 	"testing"
 	"time"
@@ -132,8 +130,6 @@ func Run(t *testing.T, suite TestingSuite) {
 		os.Exit(1)
 	}
 
-	serviceName := cleanPath(file)
-
 	suite.SetT(t)
 	suite.SetS(suite)
 
@@ -231,7 +227,7 @@ func Run(t *testing.T, suite TestingSuite) {
 	}
 
 	// Tests will be shuffled if service name is in servicesToShuffle map
-	if _, ok := servicesToShuffle[serviceName]; ok {
+	if CanShuffleFile != nil && CanShuffleFile(file) {
 		rand.Shuffle(len(tests), func(i, j int) {
 			tests[i], tests[j] = tests[j], tests[i]
 		})
@@ -239,6 +235,15 @@ func Run(t *testing.T, suite TestingSuite) {
 
 	runTests(t, tests)
 }
+
+// CanShuffleFile determines whether the test cases inside a file can be shuffled or not.
+// Implement it in your test file to enable shuffling of test cases:
+//
+//	func init() {
+//		suite.CanShuffleFile = func(file string) bool {
+//			// return true if you want to shuffle the test cases inside this file
+//		}
+var CanShuffleFile func(file string) bool
 
 // Filtering method according to set regular expression
 // specified command-line argument -m
@@ -270,26 +275,4 @@ func runTests(t testing.TB, tests []testing.InternalTest) {
 
 type runner interface {
 	Run(name string, f func(t *testing.T)) bool
-}
-
-func cleanPath(path string) string {
-	replaced := strings.Replace(path, monorepoPath+"/", "", -1)
-
-	splittedPath := strings.Split(replaced, "/")
-
-	// checking if service is from monorepo/pkg folder
-	if splittedPath[0] == "pkg" {
-		return splittedPath[1]
-	}
-
-	return splittedPath[0]
-}
-
-var monorepoPath = path.Join(os.Getenv("GOPATH"), "src", "github.com", "wallester", "monorepo")
-
-// services map which are prepared for shuffled tests run
-// to be removed after fixing all services tests
-var servicesToShuffle = map[string]struct{}{
-	"automation": {},
-	"card-reference-numbers-management-service": {},
 }

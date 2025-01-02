@@ -310,4 +310,6 @@ var servicesToShuffle = map[string]struct{}{
 	"task-service":                              {},
 	"user-service":                              {},
 	"whitelabel-api":                            {},
+	"token-service":                             {},
+	"bank-service":                              {},
 }
